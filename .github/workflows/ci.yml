@@ -79,7 +79,6 @@ jobs:
         run: dotnet tool install --global SpecFlow.Plus.LivingDoc.CLI
 
       - name: Generar reporte LivingDoc de pruebas BDD
-        shell: bash
         run: |
           DLL_PATH=$(find tests/Music.Bdd/bin -type f -name "Music.Bdd.dll" | head -n 1)
           TEST_JSON=$(find tests/Music.Bdd/bin -type f -name "TestExecution.json" | head -n 1)
