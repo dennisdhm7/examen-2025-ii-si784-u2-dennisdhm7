@@ -64,7 +64,13 @@ jobs:
           }
           $reports = ($files | ForEach-Object { $_.FullName }) -join ';'
           Write-Host "✅ Archivos encontrados: $reports"
-          reportgenerator -reports:$reports -targetdir:"coverage-report" -reporttypes:"Html;Cobertura"
+          $reportGeneratorPath = "$HOME/.dotnet/tools/reportgenerator"
+          if (Test-Path $reportGeneratorPath) {
+            & $reportGeneratorPath -reports:$reports -targetdir:"coverage-report" -reporttypes:"Html;Cobertura"
+          } else {
+            Write-Error "❌ reportgenerator no encontrado en $reportGeneratorPath"
+            exit 1
+          }
         env:
           PATH: $HOME/.dotnet/tools:$PATH
 
