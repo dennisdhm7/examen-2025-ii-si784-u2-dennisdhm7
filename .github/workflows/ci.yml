@@ -54,6 +54,7 @@ jobs:
         run: dotnet tool install --global dotnet-reportgenerator-globaltool
 
       - name: Generar reporte de cobertura en HTML
+        shell: bash
         run: |
           REPORTS=$(find . -type f -name "coverage.cobertura.xml" | tr '\n' ';')
           reportgenerator -reports:"$REPORTS" -targetdir:"coverage-report" -reporttypes:"Html;Cobertura"
@@ -65,6 +66,7 @@ jobs:
         run: dotnet tool install --global SpecFlow.Plus.LivingDoc.CLI
 
       - name: Generar reporte LivingDoc de pruebas BDD
+        shell: bash
         run: |
           DLL_PATH=$(find tests/Music.Bdd/bin -type f -name "Music.Bdd.dll" | head -n 1)
           TEST_JSON=$(find tests/Music.Bdd/bin -type f -name "TestExecution.json" | head -n 1)
@@ -74,6 +76,7 @@ jobs:
 
       # --------- PUBLICAR EN GITHUB PAGES -----------
       - name: Preparar contenido para GitHub Pages
+        shell: bash
         run: |
           mkdir -p public/coverage
           mkdir -p public/livingdoc
