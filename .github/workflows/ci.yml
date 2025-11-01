@@ -54,12 +54,14 @@ jobs:
         run: dotnet tool install --global dotnet-reportgenerator-globaltool
 
       - name: Generar reporte de cobertura en HTML
-        shell: bash
         run: |
-          REPORTS=$(find . -type f -name "coverage.cobertura.xml" | tr '\n' ';')
-          reportgenerator -reports:"$REPORTS" -targetdir:"coverage-report" -reporttypes:"Html;Cobertura"
+          echo "🔍 Buscando archivos de cobertura..."
+          $reports = Get-ChildItem -Recurse -Filter "coverage.cobertura.xml" | ForEach-Object { $_.FullName } -join ';'
+          echo "Archivos encontrados: $reports"
+          reportgenerator -reports:"$reports" -targetdir:"coverage-report" -reporttypes:"Html;Cobertura"
         env:
           PATH: $HOME/.dotnet/tools:$PATH
+        shell: pwsh
 
       # --------- GENERAR LIVINGDOC (BDD) -----------
       - name: Instalar SpecFlow LivingDoc
