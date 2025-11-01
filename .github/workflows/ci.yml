@@ -109,24 +109,47 @@ jobs:
 
       # --------- PUBLICAR EN GITHUB PAGES -----------
       - name: Preparar contenido para GitHub Pages
-        shell: bash
+        shell: pwsh
         run: |
-          mkdir -p public/coverage
-          mkdir -p public/livingdoc
-          cp -r coverage-report/* public/coverage/
-          cp -r livingdoc/* public/livingdoc/
-          cat > public/index.html <<'HTML'
+          Write-Host "📦 Preparando contenido para GitHub Pages..."
+
+          # Crear carpetas destino
+          New-Item -ItemType Directory -Force -Path public/coverage | Out-Null
+          New-Item -ItemType Directory -Force -Path public/livingdoc | Out-Null
+
+          # Copiar cobertura
+          if (Test-Path "coverage-report") {
+            Copy-Item -Recurse -Force coverage-report/* public/coverage/ -ErrorAction SilentlyContinue
+            Write-Host "✅ Reporte de cobertura copiado."
+          } else {
+            Write-Warning "⚠️ No se encontró carpeta coverage-report."
+          }
+
+          # Copiar LivingDoc (carpeta o archivo)
+          if (Test-Path "livingdoc/index.html") {
+            Write-Host "✅ Se detectó carpeta livingdoc/"
+            Copy-Item -Recurse -Force livingdoc/* public/livingdoc/
+          } elseif (Test-Path "livingdoc.html") {
+            Write-Host "✅ Se detectó archivo livingdoc.html"
+            Copy-Item livingdoc.html public/livingdoc/index.html
+          } else {
+            Write-Warning "⚠️ No se encontró reporte LivingDoc (ni carpeta ni archivo)."
+          }
+
+          # Crear index principal
+          $html = @"
           <html>
-          <head><meta charset="utf-8"><title>Reportes Examen U2 - Primera Parte</title></head>
-          <body>
-            <h1>Reportes Examen - Primera Parte</h1>
-            <ul>
-              <li><a href="./coverage/index.htm">📊 Reporte de Cobertura</a></li>
-              <li><a href="./livingdoc/index.html">📘 Reporte BDD (LivingDoc)</a></li>
-            </ul>
-          </body>
+            <head><meta charset='utf-8'><title>Reportes Examen U2 - Primera Parte</title></head>
+            <body>
+              <h1>Reportes Examen - Primera Parte</h1>
+              <ul>
+                <li><a href='./coverage/index.htm'>📊 Reporte de Cobertura</a></li>
+                <li><a href='./livingdoc/index.html'>📘 Reporte BDD (LivingDoc)</a></li>
+              </ul>
+            </body>
           </html>
-          HTML
+          "@
+          $html | Out-File -Encoding utf8 public/index.html
 
       - name: Subir artefactos de reportes a Pages
         uses: actions/upload-pages-artifact@v3
