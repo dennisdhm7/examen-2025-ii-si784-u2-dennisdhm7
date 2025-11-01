@@ -79,10 +79,31 @@ jobs:
         run: dotnet tool install --global SpecFlow.Plus.LivingDoc.CLI
 
       - name: Generar reporte LivingDoc de pruebas BDD
+        shell: pwsh
         run: |
-          DLL_PATH=$(find tests/Music.Bdd/bin -type f -name "Music.Bdd.dll" | head -n 1)
-          TEST_JSON=$(find tests/Music.Bdd/bin -type f -name "TestExecution.json" | head -n 1)
-          livingdoc test-assembly "$DLL_PATH" -t "$TEST_JSON" -o livingdoc
+          Write-Host "📘 Buscando archivos para LivingDoc..."
+          $dllPath = Get-ChildItem -Recurse -Filter "Music.Bdd.dll" | Select-Object -First 1
+          $testJson = Get-ChildItem -Recurse -Filter "TestExecution.json" | Select-Object -First 1
+
+          if (-not $dllPath) {
+            Write-Error "❌ No se encontró Music.Bdd.dll"
+            exit 1
+          }
+          if (-not $testJson) {
+            Write-Error "❌ No se encontró TestExecution.json"
+            exit 1
+          }
+
+          Write-Host "✅ DLL encontrada: $($dllPath.FullName)"
+          Write-Host "✅ JSON encontrado: $($testJson.FullName)"
+
+          $livingDocPath = "$HOME/.dotnet/tools/livingdoc"
+          if (Test-Path $livingDocPath) {
+            & $livingDocPath test-assembly "$($dllPath.FullName)" -t "$($testJson.FullName)" -o livingdoc
+          } else {
+            Write-Error "❌ LivingDoc CLI no encontrado en $livingDocPath"
+            exit 1
+          }
         env:
           PATH: $HOME/.dotnet/tools:$PATH
 
