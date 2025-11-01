@@ -1,0 +1,218 @@
+name: CI - Tests and Reports
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-and-report:
+    runs-on: ubuntu-latest
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+      DOTNET_NOLOGO: '1'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Run unit tests (Music.Tests) with coverage
+        run: |
+          dotnet test tests/Music.Tests/Music.Tests.csproj --configuration Release --no-build --collect:"XPlat Code Coverage" --logger "trx;LogFileName=Music.Tests.trx"
+
+      - name: Run BDD tests (Music.Bdd)
+        run: |
+          dotnet test tests/Music.Bdd/Music.Bdd.csproj --configuration Release --no-build --logger "trx;LogFileName=Music.Bdd.trx"
+
+      - name: Install reportgenerator global tool
+        run: |
+          dotnet tool install --global dotnet-reportgenerator-globaltool --version 5.1.23
+        env:
+          PATH: ${{ env.PATH }}:$HOME/.dotnet/tools
+
+      - name: Generate HTML coverage report
+        run: |
+          export PATH="$HOME/.dotnet/tools:$PATH"
+          reportgenerator -reports:"**/coverage.cobertura.xml" -targetdir:coverage-report -reporttypes:Html
+
+      - name: Collect SpecFlow LivingDoc JSON (if produced)
+        run: |
+          mkdir -p coverage-report/livingdoc || true
+          if [ -f "tests/Music.Bdd/bin/Debug/net8.0/TestExecution.json" ]; then cp tests/Music.Bdd/bin/Debug/net8.0/TestExecution.json coverage-report/livingdoc/; fi
+
+      - name: Upload coverage and BDD report to GitHub Pages (gh-pages)
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./coverage-report
+
+      - name: Upload test results (artifacts)
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            **/*.trx
+            **/coverage.cobertura.xml
+            tests/Music.Bdd/bin/Debug/net8.0/TestExecution.json
+name: CI - Unit, BDD, UI | Coverage, LivingDoc, Video & Pages
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build-test-and-publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      # --------- Browsers for Selenium ----------
+      - name: Install Google Chrome & Firefox
+        run: |
+          sudo apt-get update
+          # Google Chrome
+          wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+          echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
+          sudo apt-get update
+          sudo apt-get install -y google-chrome-stable firefox xvfb ffmpeg
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build (Release)
+        run: dotnet build --configuration Release --no-restore
+
+      # --------- UNIT TESTS (with coverage) ----------
+      - name: Test - Unit
+        run: |
+          dotnet test tests/Music.Tests/Music.Tests.csproj \
+            --configuration Release --no-build \
+            --collect:"XPlat Code Coverage" \
+            /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura \
+            /p:ExcludeByFile="**/obj/**"
+
+      # --------- BDD TESTS (with coverage) ----------
+      - name: Test - BDD
+        run: |
+          dotnet test tests/Music.Bdd/Music.Bdd.csproj \
+            --configuration Release --no-build \
+            --collect:"XPlat Code Coverage" \
+            /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura \
+            /p:ExcludeByFile="**/obj/**"
+
+      # --------- Coverage HTML Report ----------
+      - name: Install ReportGenerator
+        run: dotnet tool install --global dotnet-reportgenerator-globaltool
+
+      - name: Generate Coverage HTML
+        run: |
+          REPORTS=$(find . -type f -name "coverage.cobertura.xml" | tr '\n' ';')
+          reportgenerator -reports:"$REPORTS" -targetdir:"coverage-report" -reporttypes:"Html;Cobertura"
+        env:
+          PATH: $HOME/.dotnet/tools:$PATH
+
+      # --------- LivingDoc for SpecFlow ----------
+      - name: Install LivingDoc CLI
+        run: dotnet tool install --global SpecFlow.Plus.LivingDoc.CLI
+
+      - name: Generate LivingDoc
+        run: |
+          DLL_PATH=$(find tests/Music.Bdd/bin -type f -name "Music.Bdd.dll" | head -n 1)
+          TEST_JSON=$(find tests/Music.Bdd/bin -type f -name "TestExecution.json" | head -n 1)
+          livingdoc test-assembly "$DLL_PATH" -t "$TEST_JSON" -o livingdoc
+        env:
+          PATH: $HOME/.dotnet/tools:$PATH
+
+      # --------- UI Tests (2 browsers) + Screen recording ----------
+      - name: Run UI tests with video (Chrome & Firefox)
+        shell: bash
+        run: |
+          # Xvfb virtual display
+          Xvfb :99 -screen 0 1280x720x24 &
+          export DISPLAY=:99
+
+          # Start recording
+          ffmpeg -y -f x11grab -r 25 -s 1280x720 -i :99 -codec:v libx264 -preset veryfast -pix_fmt yuv420p ui-video.mp4 >/dev/null 2>&1 &
+          FFMPID=$!
+
+          # Run tests
+          set +e
+          dotnet test tests/UI.Tests/UI.Tests.csproj --configuration Release
+          TEST_EXIT=$?
+          set -e
+
+          # Stop recording
+          kill -INT $FFMPID || true
+          sleep 2
+
+          mkdir -p public/ui
+          mv ui-video.mp4 public/ui/ui-video.mp4 || true
+          # Copia screenshots si existen
+          if [ -d tests/UI.Tests/bin/Release ]; then
+            find tests/UI.Tests/bin/Release -type f -name "*.png" -exec cp {} public/ui/ \; || true
+          fi
+
+          exit $TEST_EXIT
+
+      # --------- Prepare GitHub Pages content ----------
+      - name: Prepare Pages folder
+        run: |
+          mkdir -p public/coverage
+          mkdir -p public/livingdoc
+          cp -r coverage-report/* public/coverage/
+          cp -r livingdoc/* public/livingdoc/
+
+          cat > public/index.html <<'HTML'
+          <html>
+          <head><meta charset="utf-8"><title>Reportes Examen U2</title></head>
+          <body>
+            <h1>Examen U2 - Calidad y Pruebas</h1>
+            <ul>
+              <li><a href="./coverage/index.htm">📊 Coverage Report</a></li>
+              <li><a href="./livingdoc/index.html">📘 BDD LivingDoc</a></li>
+              <li><a href="./ui/ui-video.mp4">🎥 Video UI Test</a></li>
+            </ul>
+          </body>
+          </html>
+          HTML
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+  deploy:
+    needs: build-test-and-publish
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

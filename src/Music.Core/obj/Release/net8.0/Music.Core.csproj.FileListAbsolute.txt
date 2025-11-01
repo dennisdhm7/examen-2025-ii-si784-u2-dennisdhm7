@@ -1,0 +1,12 @@
+C:\Users\HP\Desktop\examen-2025-ii-si784-u2-dennisdhm7\src\Music.Core\bin\Release\net8.0\Music.Core.deps.json
+C:\Users\HP\Desktop\examen-2025-ii-si784-u2-dennisdhm7\src\Music.Core\bin\Release\net8.0\Music.Core.dll
+C:\Users\HP\Desktop\examen-2025-ii-si784-u2-dennisdhm7\src\Music.Core\bin\Release\net8.0\Music.Core.pdb
+C:\Users\HP\Desktop\examen-2025-ii-si784-u2-dennisdhm7\src\Music.Core\obj\Release\net8.0\Music.Core.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\HP\Desktop\examen-2025-ii-si784-u2-dennisdhm7\src\Music.Core\obj\Release\net8.0\Music.Core.AssemblyInfoInputs.cache
+C:\Users\HP\Desktop\examen-2025-ii-si784-u2-dennisdhm7\src\Music.Core\obj\Release\net8.0\Music.Core.AssemblyInfo.cs
+C:\Users\HP\Desktop\examen-2025-ii-si784-u2-dennisdhm7\src\Music.Core\obj\Release\net8.0\Music.Core.csproj.CoreCompileInputs.cache
+C:\Users\HP\Desktop\examen-2025-ii-si784-u2-dennisdhm7\src\Music.Core\obj\Release\net8.0\Music.Core.sourcelink.json
+C:\Users\HP\Desktop\examen-2025-ii-si784-u2-dennisdhm7\src\Music.Core\obj\Release\net8.0\Music.Core.dll
+C:\Users\HP\Desktop\examen-2025-ii-si784-u2-dennisdhm7\src\Music.Core\obj\Release\net8.0\refint\Music.Core.dll
+C:\Users\HP\Desktop\examen-2025-ii-si784-u2-dennisdhm7\src\Music.Core\obj\Release\net8.0\Music.Core.pdb
+C:\Users\HP\Desktop\examen-2025-ii-si784-u2-dennisdhm7\src\Music.Core\obj\Release\net8.0\ref\Music.Core.dll
